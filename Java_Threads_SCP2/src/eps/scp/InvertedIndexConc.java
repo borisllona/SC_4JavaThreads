@@ -19,6 +19,7 @@ public class InvertedIndexConc{
     private final float DMinimunMatchingPercentage = 0.80f;  // Porcentaje mínimo de matching entre el texto original y la consulta (80%)
     private final int DPaddingMatchText = 20;   // Al mostrar el texto original que se corresponde con la consulta se incrementa en 20 carácteres
     private final int DThreads = 5;
+    private final float Progress = 0.10;
     //private final int DChunkSize = 100;
 
     // Members
@@ -47,18 +48,25 @@ public class InvertedIndexConc{
         nThreads = numThreads;
     }
 
-    public InvertedIndexConc(String inputFile,int numThreads ,int keySize) {
+    public InvertedIndexConc(String inputFile,int numThreads ,int progress) {
         InputFilePath = inputFile;
         nThreads = numThreads;
+        Progress = progress/100;
+    }
+    public InvertedIndexConc(String inputFile,int numThreads ,int progress,int keySize) {
+        InputFilePath = inputFile;
+        nThreads = numThreads;
+        Progress = progress/100;
         KeySize = keySize;
     }
+    /*
     public InvertedIndexConc(int numThreads) {
         nThreads = numThreads;
     }
     public InvertedIndexConc(int numThreads, int keySize) {
         nThreads = numThreads;
         KeySize = keySize;
-    }
+    }*/
     public void SetFileName(String inputFile) {
         InputFilePath = inputFile;
     }
