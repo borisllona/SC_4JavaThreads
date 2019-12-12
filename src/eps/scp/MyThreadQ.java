@@ -21,7 +21,7 @@ public class MyThreadQ implements Runnable {
         this.listOfFiles = listOfFiles;
         this.initialFile = initialFile;
         this.finalFile = finalFile;
-        this.Hash = HashMultimap.create();
+        this.Hash = hash;
         this.n = "T" + number;
         System.out.println("Thread n" + number + " creado");
     }

@@ -19,6 +19,7 @@ public class InvertedIndexConc{
     private final float DMinimunMatchingPercentage = 0.80f;  // Porcentaje mínimo de matching entre el texto original y la consulta (80%)
     private final int DPaddingMatchText = 20;   // Al mostrar el texto original que se corresponde con la consulta se incrementa en 20 carácteres
     private final int DThreads = 5;
+    private int Progress = 5;
     //private final int DChunkSize = 100;
 
     // Members
@@ -94,7 +95,7 @@ public class InvertedIndexConc{
                 dif = finalchar - file.length();
                 finalchar -= dif;
             }
-            MyThreadB t = new MyThreadB(i, KeySize, file, initialchar, finalchar);
+            MyThreadB t = new MyThreadB(i, KeySize, file, initialchar, finalchar,Hash);
             initialchar += charxThread;
             thr.add(t); //añadimos el thread al array de threads
             t.thread.start();

@@ -59,7 +59,7 @@ public class Query
         else if (args.length == 5)
             hash = new InvertedIndexConc(Integer.parseInt(args[3]), Integer.parseInt(args[4]));
         else if (args.length == 6)
-            hash = new InvertedIndexConc(Integer.parseInt(args[3]), Integer.parseInt(args[4],Integer.parseInt(args[5]));
+            hash = new InvertedIndexConc(Integer.parseInt(args[3]), Integer.parseInt(args[4],Integer.parseInt(args[5])));
         else
             hash = new InvertedIndexConc();
         /*System.out.println("queryString: " + queryString);

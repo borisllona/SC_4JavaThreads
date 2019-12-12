@@ -20,13 +20,13 @@ public class MyThreadB implements Runnable{
     private HashMultimap<String, Long> Hash;
     private int KeySize;
 
-    MyThreadB(int number, int KeySize, File file, long initialChar, long finalChar) {
+    MyThreadB(int number, int KeySize, File file, long initialChar, long finalChar, HashMultimap<String, Long> hash) {
         this.thread = new Thread(this);
         this.number = number;
         this.file = file;
         this.initialChar = initialChar;
         this.finalChar = finalChar;
-        this.Hash = HashMultimap.create();
+        this.Hash = hash;
         this.KeySize = KeySize;
         this.n = "T" + number;
         System.out.println("Thread n" + number + " creado");
