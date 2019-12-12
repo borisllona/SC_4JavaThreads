@@ -47,7 +47,7 @@ public class Query
         long startTime = System.nanoTime();
 
         if (args.length <3 || args.length>5)
-            System.err.println("Erro in Parameters. Usage: Query <String> <IndexDirectory> <filename> <numThreads> [<Key_Size>]");
+            System.err.println("Erro in Parameters. Usage: Query <String> <IndexDirectory> <filename> <numThreads> [<Progress>] [<Key_Size>]");
         if (args.length > 0)
             queryString = args[0];
         if (args.length > 1)
@@ -56,11 +56,17 @@ public class Query
             fileName = args[2];
         if (args.length == 4)
             hash = new InvertedIndexConc(Integer.parseInt(args[3]));
-        else if (args.length >= 5)
+        else if (args.length == 5)
             hash = new InvertedIndexConc(Integer.parseInt(args[3]), Integer.parseInt(args[4]));
+        else if (args.length == 6)
+            hash = new InvertedIndexConc(Integer.parseInt(args[3]), Integer.parseInt(args[4],Integer.parseInt(args[5]));
         else
             hash = new InvertedIndexConc();
-
+        /*System.out.println("queryString: " + queryString);
+        System.out.println("indexdire: " + indexDirectory);
+        System.out.println("filename: " + fileName);
+        System.out.println("numtrheads: " + hash.getThreads());
+        System.out.println("key: " + hash.getKey());*/
         hash.LoadIndex(indexDirectory);
         hash.SetFileName(fileName);
         //hash.PrintIndex();
@@ -68,5 +74,4 @@ public class Query
         long stopTime = System.nanoTime();
         System.out.println("Time: "+(stopTime - startTime)*pow(10,-9));
     }
-
 }

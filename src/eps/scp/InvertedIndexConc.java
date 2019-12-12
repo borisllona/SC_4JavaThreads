@@ -47,16 +47,27 @@ public class InvertedIndexConc{
         nThreads = numThreads;
     }
 
-    public InvertedIndexConc(String inputFile,int numThreads ,int keySize) {
+    public InvertedIndexConc(String inputFile,int numThreads ,int progress) {
         InputFilePath = inputFile;
         nThreads = numThreads;
+        Progress = progress/100;
+    }
+    public InvertedIndexConc(String inputFile,int numThreads ,int progress,int keySize) {
+        InputFilePath = inputFile;
+        nThreads = numThreads;
+        Progress = progress/100;
         KeySize = keySize;
     }
     public InvertedIndexConc(int numThreads) {
         nThreads = numThreads;
     }
-    public InvertedIndexConc(int numThreads, int keySize) {
+    public InvertedIndexConc(int numThreads, int progress) {
         nThreads = numThreads;
+        Progress = progress/100;
+    }
+    public InvertedIndexConc(int numThreads,int progress,int keySize) {
+        nThreads = numThreads;
+        Progress = progress/100;
         KeySize = keySize;
     }
     public void SetFileName(String inputFile) {

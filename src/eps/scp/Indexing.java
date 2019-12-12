@@ -34,23 +34,25 @@ public class Indexing {
         InvertedIndexConc hash;
         long startTime = System.nanoTime();
 
-        if (args.length <3 || args.length>5)
-            System.err.println("Erro in Parameters. Usage: Indexing <TextFile> [<Key_Size>] [<Index_Directory>]");
+        if (args.length <2 || args.length>5)
+            System.err.println("Erro in Parameters. Usage: Indexing <TextFile> <Number of threads> [<Progress>] [<Key_Size>] [<Index_Directory>]");
         if (args.length < 2)
             hash = new InvertedIndexConc(args[0]);    // Indexing <TextFile>
         else if(args.length < 3)
             hash = new InvertedIndexConc(args[0],Integer.parseInt(args[1])); //Indexing <TextFile> <Number of threads>
-        else
-            hash = new InvertedIndexConc(args[0],Integer.parseInt(args[1]) ,Integer.parseInt(args[2])); //Indexing <TextFile> <Number of threads> [<Key_Size>]
+        else if(args.length < 4)
+            hash = new InvertedIndexConc(args[0],Integer.parseInt(args[1]),Integer.parseInt(args[2])); //Indexing <TextFile> <Number of threads> [<Progress>]
+        else if(args.length <= 5)
+            hash = new InvertedIndexConc(args[0],Integer.parseInt(args[1]) ,Integer.parseInt(args[2]),Integer.parseInt(args[3])); //Indexing <TextFile> <Number of threads> [<Progress>] [<Key_Size>]
 
         hash.BuildIndex();
 
-        if (args.length > 3)
+        if (args.length == 5)
             try {
-                hash.SaveIndex(args[3]);
+                hash.SaveIndex(args[5]);
             }catch (InterruptedException e) { e.printStackTrace(); }
-        //else
-          //  hash.PrintIndex();
+        else
+            hash.PrintIndex();
 
         long stopTime = System.nanoTime();
         System.out.println("Time: "+(stopTime - startTime)*pow(10,-9));
