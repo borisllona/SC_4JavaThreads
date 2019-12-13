@@ -30,7 +30,7 @@ public class Indexing {
         long stopTime = System.nanoTime();
         System.out.println("Time: "+(stopTime - startTime)*pow(10,-9));
     }
-    private static void concurrent(String[] args){
+    private static synchronized void concurrent(String[] args){
         InvertedIndexConc hash = null;
         long startTime = System.nanoTime();
 

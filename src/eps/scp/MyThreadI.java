@@ -10,6 +10,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class MyThreadI implements Runnable{
     public final String DIndexFilePrefix = "/IndexFile";
@@ -21,8 +24,14 @@ public class MyThreadI implements Runnable{
     private long files;
     private String n;
     private HashMultimap<String, Long> Hash;
+    private int nThreads;
 
-    MyThreadI(int number, ArrayList<String> list, String outputDirectory, int files, HashMultimap<String, Long> hash){
+    static Lock bl = new ReentrantLock();
+    static Semaphore llegada = new Semaphore(1);    //permiso a 1
+    static Semaphore salida = new Semaphore(0);     //permiso a 0
+    static volatile int barrierCounter = 0;
+
+    MyThreadI(int number, ArrayList<String> list, String outputDirectory, int files, HashMultimap<String, Long> hash, int nThreads){
         this.thread = new Thread(this);
         this.number = number;
         this.list = list;
@@ -30,6 +39,7 @@ public class MyThreadI implements Runnable{
         this.outputDirectory = outputDirectory;
         this.n = "T"+number;
         this.Hash = hash;
+        this.nThreads = nThreads;
         System.out.println("Thread n"+number+" creado");
     }
 
@@ -62,6 +72,8 @@ public class MyThreadI implements Runnable{
                 System.exit(-1);
             }
         }
+        act_as_a_barrier();
+
     }
 
 
@@ -83,5 +95,29 @@ public class MyThreadI implements Runnable{
     }
 
     // Método para cargar en memoria (HashMap) el índice invertido desde su copia en disco.
-
+    private void act_as_a_barrier() {
+        try {
+            llegada.acquire();
+        } catch (InterruptedException e1) {}
+        bl.lock();
+        barrierCounter++;
+        System.out.println(barrierCounter);
+        bl.unlock();
+        if (barrierCounter < nThreads) {
+            llegada.release();
+        } else {
+            salida.release();
+        }
+        try {
+            salida.acquire();
+        } catch (InterruptedException e) {}
+        bl.lock();
+        barrierCounter--;
+        bl.unlock();
+        if (barrierCounter > 0) {
+            salida.release();
+        } else {
+            llegada.release();
+        }
+    }
 }

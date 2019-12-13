@@ -9,6 +9,9 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.text.NumberFormat;
 import java.util.Random;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class MyThreadB implements Runnable{
     private int number;
@@ -19,8 +22,14 @@ public class MyThreadB implements Runnable{
     private String n;
     private HashMultimap<String, Long> Hash;
     private int KeySize;
+    private int nThreads;
 
-    MyThreadB(int number, int KeySize, File file, long initialChar, long finalChar, HashMultimap<String, Long> hash) {
+    static Lock bl = new ReentrantLock();
+    static Semaphore llegada = new Semaphore(1);    //permiso a 1
+    static Semaphore salida = new Semaphore(0);     //permiso a 0
+    static volatile int barrierCounter = 0;
+
+    MyThreadB(int number, int KeySize, File file, long initialChar, long finalChar, HashMultimap<String, Long> hash, int nThreads) {
         this.thread = new Thread(this);
         this.number = number;
         this.file = file;
@@ -29,6 +38,7 @@ public class MyThreadB implements Runnable{
         this.Hash = hash;
         this.KeySize = KeySize;
         this.n = "T" + number;
+        this.nThreads = nThreads;
         System.out.println("Thread n" + number + " creado");
     }
 
@@ -74,12 +84,39 @@ public class MyThreadB implements Runnable{
         } catch (IOException e) {
             e.printStackTrace();
         }
-
+    //act_as_a_barrier();
 
     }
     // Método que añade una k-word y su desplazamiento en el HashMap.
-    private void AddKey(String key, long offset){
+    private synchronized void AddKey(String key, long offset){
         Hash.put(key, offset);
         //System.out.print(offset+"\t-> "+key+"\r");
+    }
+    private void act_as_a_barrier() {
+        try {
+            llegada.acquire();
+        } catch (InterruptedException e1) {
+        }
+        bl.lock();
+        barrierCounter++;
+        System.out.println(barrierCounter);
+        bl.unlock();
+        if (barrierCounter < nThreads) {
+            llegada.release();
+        } else {
+            salida.release();
+        }
+        try {
+            salida.acquire();
+        } catch (InterruptedException e) {
+        }
+        bl.lock();
+        barrierCounter--;
+        bl.unlock();
+        if (barrierCounter > 0) {
+            salida.release();
+        } else {
+            llegada.release();
+        }
     }
 }

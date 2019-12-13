@@ -3,6 +3,8 @@ package eps.scp;
 import com.google.common.collect.HashMultimap;
 
 import java.io.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class MyThreadQ implements Runnable {
     //public final String DIndexFilePrefix = "/IndexFile";
@@ -14,6 +16,7 @@ public class MyThreadQ implements Runnable {
     private long initialFile, finalFile;
     private String n;
     public HashMultimap<String, Long> Hash;
+    Lock l = new ReentrantLock();
 
     MyThreadQ(int number, File[] listOfFiles, long initialFile, long finalFile, HashMultimap<String, Long> hash) {
         this.thread = new Thread(this);
@@ -51,7 +54,12 @@ public class MyThreadQ implements Runnable {
                             // Recorremos los offsets para esta clave y los añadimos al HashMap
                             for (int i = 0; i < offsets.length; i++) {
                                 long offset = Long.parseLong(offsets[i]);
-                                Hash.put(key, offset);
+                                l.lock();
+                                try{
+                                    Hash.put(key, offset);
+                                }finally {
+                                    l.unlock();
+                                }
                             }
                         }
                     } catch (IOException e) {

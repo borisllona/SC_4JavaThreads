@@ -7,6 +7,9 @@ import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Created by Nando on 3/10/19.
@@ -29,7 +32,13 @@ public class InvertedIndexConc{
     private int nThreads;
     public HashMultimap<String, Long> Hash = HashMultimap.create();  // Hash Map con el Índice Invertido.
 
-    public int test = 69;
+    //Barrier variables
+    static Lock bl = new ReentrantLock();
+    static Semaphore llegada = new Semaphore(1);    //permiso a 1
+    static Semaphore salida = new Semaphore(0);     //permiso a 0
+    static volatile int barrierCounter = 0;
+
+//    public int test = 69;
     // Constructores
     public InvertedIndexConc() {
         InputFilePath = null;
@@ -85,6 +94,9 @@ public class InvertedIndexConc{
 
         long fileLen = file.length();
 
+        Semaphore llegada = new Semaphore(1);    //permiso a 1
+        Semaphore salida = new Semaphore(0);     //permiso a 0
+
         while(fileLen>0){
             fileLen-=nThreads;
             charxThread++;
@@ -95,91 +107,22 @@ public class InvertedIndexConc{
                 dif = finalchar - file.length();
                 finalchar -= dif;
             }
-            MyThreadB t = new MyThreadB(i, KeySize, file, initialchar, finalchar,Hash);
+            MyThreadB t = new MyThreadB(i, KeySize, file, initialchar, finalchar,Hash, nThreads);
             initialchar += charxThread;
             thr.add(t); //añadimos el thread al array de threads
             t.thread.start();
 
         }
+        //act_as_a_barrier(llegada, salida);
         for (MyThreadB t : thr) {
             try {
                 t.thread.join();
-                Hash.putAll(t.getHash());
+                //Hash.putAll(t.getHash());
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
     }
-
-    /*
-    public void BuildIndex2() {
-        byte[] chunk = new byte[DChunkSize];
-        int chunkLen = 0, k = 0, countFChars=0;
-        long offset = 0;
-
-        try {
-            File file = new File(InputFilePath);
-            is = new FileInputStream(file);
-            k=chunk.length-1;
-            while((chunkLen = ReadChunk(chunk,k))>=KeySize)
-            {
-                String data = new String(chunk).replaceAll("\n", " ").replaceAll("\r", " ").replaceAll("\t", " ");
-                //countFChars = data.length() - data.replaceAll("\n", "").replaceAll("\r", "").replaceAll("\t", "").length();
-                //.replace("\n", "").replace("\r", "");;
-                for (k=0;k<=(chunkLen-(KeySize)); k++)
-                {
-                    if (offset==582399)
-                        System.out.println("Debug");
-                    try {
-                        char firstCharacter = data.charAt(k);
-                        if (firstCharacter != '\n' && firstCharacter != '\r' && firstCharacter != '\t') {
-                            String key = GetKey(data, k);
-                            if (key=="lugar de l")
-                                System.out.println("Debug");
-                            if (key != null)
-                                AddKey(key, offset);
-                        }
-                        offset++;
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        } catch (FileNotFoundException fnfE) {
-            System.err.println("Error opening Input file.");
-        }
-    }
-*/
-
-    /*
-    private String GetKey(String data, int position)
-    {
-        String cleanData = data.substring(position);
-        cleanData = cleanData.replace("\n", "").replace("\r", "").replace("\t", "");
-        if (cleanData.length()>=KeySize)
-            return (cleanData.substring(0, KeySize));
-        else
-            return null;
-    }
-    */
-
-    /*
-    private int ReadChunk(byte[] chunk, int k){
-        try {
-            System.arraycopy(chunk, k+1, chunk, 0, chunk.length-(k+1));
-            int size = is.read(chunk, chunk.length-(k+1), chunk.length-(chunk.length-(k+1)));
-            if (size>0)
-                return (size+chunk.length-(k+1));
-            else
-                return (0);
-        } catch (IOException e) {
-            System.err.println("Error reading Input file.");
-            return(0);
-        }
-    }
-    */
-
-
 
     // Método para imprimir por pantalla el índice invertido.
     public void PrintIndex() {
@@ -206,6 +149,9 @@ public class InvertedIndexConc{
         Set<String> keySet = Hash.keySet();
         Set<String> keyTSet;
         ArrayList<MyThreadI> thr = new ArrayList<MyThreadI>();
+
+
+
         // Calculamos el número de ficheros a crear en función del núemro de claves que hay en el hash.
         if (keySet.size() > DIndexMaxNumberOfFiles)
             numberOfFiles = DIndexMaxNumberOfFiles;
@@ -235,17 +181,19 @@ public class InvertedIndexConc{
                 list.add(key);
                 j++;
             }
-            MyThreadI t = new MyThreadI(i, list,outputDirectory,(int) filesxThread,Hash);
+            MyThreadI t = new MyThreadI(i, list,outputDirectory,(int) filesxThread,Hash, nThreads);
             thr.add(t);
             t.thread.start();
         }
-        for (MyThreadI t : thr) {
+
+
+        /*for (MyThreadI t : thr) {
             try {
                 t.thread.join();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-        }
+        }*/
     }
 
     // Método para cargar en memoria (HashMap) el índice invertido desde su copia en disco.
@@ -407,4 +355,6 @@ public class InvertedIndexConc{
         }
         System.out.println("Matching at offset "+offset+" ("+ perMatching*100 + "%): "+new String(matchText));
     }
+
+
 }
