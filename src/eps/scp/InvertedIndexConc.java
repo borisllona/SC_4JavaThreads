@@ -33,10 +33,11 @@ public class InvertedIndexConc{
     public HashMultimap<String, Long> Hash = HashMultimap.create();  // Hash Map con el Índice Invertido.
 
     //Barrier variables
+    /*
     static Lock bl = new ReentrantLock();
     static Semaphore llegada = new Semaphore(1);    //permiso a 1
     static Semaphore salida = new Semaphore(0);     //permiso a 0
-    static volatile int barrierCounter = 0;
+    static volatile int barrierCounter = 0;*/
 
 //    public int test = 69;
     // Constructores
@@ -94,9 +95,6 @@ public class InvertedIndexConc{
 
         long fileLen = file.length();
 
-        Semaphore llegada = new Semaphore(1);    //permiso a 1
-        Semaphore salida = new Semaphore(0);     //permiso a 0
-
         while(fileLen>0){
             fileLen-=nThreads;
             charxThread++;
@@ -111,8 +109,10 @@ public class InvertedIndexConc{
             initialchar += charxThread;
             thr.add(t); //añadimos el thread al array de threads
             t.thread.start();
-
         }
+        while(!thr.get(0).sincro){System.out.println("analizo");}
+        System.out.println("SALGO");
+        /*
         //act_as_a_barrier(llegada, salida);
         for (MyThreadB t : thr) {
             try {
@@ -121,7 +121,7 @@ public class InvertedIndexConc{
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-        }
+        }*/
     }
 
     // Método para imprimir por pantalla el índice invertido.
@@ -185,6 +185,8 @@ public class InvertedIndexConc{
             thr.add(t);
             t.thread.start();
         }
+        while(!thr.get(0).sincro){System.out.println("analizo");}
+        System.out.println("SALGO");
 
 
         /*for (MyThreadI t : thr) {
@@ -218,12 +220,14 @@ public class InvertedIndexConc{
                 dif = finalfile - listOfFiles.length;
                 finalfile -= dif;
             }
-            MyThreadQ t = new MyThreadQ(i, listOfFiles, initialfile, finalfile, Hash);
+            MyThreadQ t = new MyThreadQ(i, listOfFiles, initialfile, finalfile, Hash,nThreads);
             initialfile += filesxThread;
             thr.add(t); //añadimos el thread al array de threads
             t.thread.start();
-
         }
+        while(!thr.get(0).sincro){System.out.println("analizo");}
+        System.out.println("SALGO");
+        /*
         //para cada thread añadido al array controlamos su fin con la funcionn join()
         for (MyThreadQ t : thr) {
             try {
@@ -232,7 +236,7 @@ public class InvertedIndexConc{
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-        }
+        }*/
     }
 
     public void Query(String queryString) {

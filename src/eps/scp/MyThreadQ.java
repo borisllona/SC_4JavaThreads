@@ -3,6 +3,7 @@ package eps.scp;
 import com.google.common.collect.HashMultimap;
 
 import java.io.*;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -10,6 +11,8 @@ public class MyThreadQ implements Runnable {
     //public final String DIndexFilePrefix = "/IndexFile";
 
     private int number;
+    public boolean sincro;
+    private int nThreads;
     //private String outputDirectory;
     public Thread thread;
     private File[] listOfFiles;
@@ -18,7 +21,12 @@ public class MyThreadQ implements Runnable {
     public HashMultimap<String, Long> Hash;
     Lock l = new ReentrantLock();
 
-    MyThreadQ(int number, File[] listOfFiles, long initialFile, long finalFile, HashMultimap<String, Long> hash) {
+    static ReentrantLock bl = new ReentrantLock();
+    static Semaphore llegada = new Semaphore(1);    //permiso a 1
+    static Semaphore salida = new Semaphore(0);     //permiso a 0
+    static volatile int barrierCounter = 0;
+
+    MyThreadQ(int number, File[] listOfFiles, long initialFile, long finalFile, HashMultimap<String, Long> hash,int nThreads) {
         this.thread = new Thread(this);
         this.number = number;
         this.listOfFiles = listOfFiles;
@@ -26,6 +34,7 @@ public class MyThreadQ implements Runnable {
         this.finalFile = finalFile;
         this.Hash = hash;
         this.n = "T" + number;
+        this.nThreads = nThreads;
         System.out.println("Thread n" + number + " creado");
     }
     public HashMultimap<String, Long> getHash(){
@@ -72,6 +81,33 @@ public class MyThreadQ implements Runnable {
                 }
                 //System.out.println("");
             }
+        }
+        act_as_a_barrier();
+        sincro = true;
+    }
+    private void act_as_a_barrier() {
+        try {
+            llegada.acquire();
+        } catch (InterruptedException e1) {}
+        bl.lock();
+        barrierCounter++;
+        System.out.println(barrierCounter);
+        bl.unlock();
+        if (barrierCounter < nThreads) {
+            llegada.release();
+        } else {
+            salida.release();
+        }
+        try {
+            salida.acquire();
+        } catch (InterruptedException e) {}
+        bl.lock();
+        barrierCounter--;
+        bl.unlock();
+        if (barrierCounter > 0) {
+            salida.release();
+        } else {
+            llegada.release();
         }
     }
 }

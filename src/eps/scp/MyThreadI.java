@@ -18,6 +18,7 @@ public class MyThreadI implements Runnable{
     public final String DIndexFilePrefix = "/IndexFile";
 
     private int number;
+    public boolean sincro = false;
     private String outputDirectory;
     public Thread thread;
     private ArrayList<String> list;
@@ -73,7 +74,7 @@ public class MyThreadI implements Runnable{
             }
         }
         act_as_a_barrier();
-
+        sincro = true;
     }
 
 

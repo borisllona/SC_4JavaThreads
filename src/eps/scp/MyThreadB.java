@@ -23,8 +23,9 @@ public class MyThreadB implements Runnable{
     private HashMultimap<String, Long> Hash;
     private int KeySize;
     private int nThreads;
+    public boolean sincro = false;
 
-    static Lock bl = new ReentrantLock();
+    static ReentrantLock bl = new ReentrantLock();
     static Semaphore llegada = new Semaphore(1);    //permiso a 1
     static Semaphore salida = new Semaphore(0);     //permiso a 0
     static volatile int barrierCounter = 0;
@@ -84,15 +85,17 @@ public class MyThreadB implements Runnable{
         } catch (IOException e) {
             e.printStackTrace();
         }
-    //act_as_a_barrier();
-
+        act_as_a_barrier();
+        sincro = true;
+        System.out.println("IM Thread "+number+" sincro is "+sincro);
     }
     // Método que añade una k-word y su desplazamiento en el HashMap.
     private synchronized void AddKey(String key, long offset){
         Hash.put(key, offset);
         //System.out.print(offset+"\t-> "+key+"\r");
     }
-    private void act_as_a_barrier() {
+
+    void act_as_a_barrier() {
         try {
             llegada.acquire();
         } catch (InterruptedException e1) {
