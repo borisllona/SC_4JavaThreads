@@ -8,6 +8,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.text.NumberFormat;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Lock;
@@ -26,6 +27,12 @@ public class MyThreadB implements Runnable{
     public boolean sincro = false;
     private int progress;  //Marca cada cuantos caracteres hay que printar el progreso.
     private int totalChars;
+
+    //Estadisticas
+    private int numeroKeys=0;
+    private long numeroOffsets=0;
+    private int numeroBytes=0;
+    private int currentProgress=0;
 
     static ReentrantLock bl = new ReentrantLock();
     static Semaphore llegada = new Semaphore(1);    //permiso a 1
@@ -82,10 +89,24 @@ public class MyThreadB implements Runnable{
                     key = key.substring(1, KeySize) + (char) car;
 
                 if (key.length()==KeySize)
+                    /*if(Hash.get(key) == null){
+                        System.out.println("KEY NO EN HASH");
+                        bl.lock();
+                        numeroKeys++;
+                        bl.unlock();
+                    }*/
                     // Si tenemos una clave completa, la añadimos al Hash, junto a su desplazamiento dentro del fichero.
                     AddKey(key, offset-KeySize+1);
 
-                if(updateProgess()%(int)(totalChars * (progress / 100.0))==0){
+                int up = updateProgess();
+                /*System.out.println("Updated progress is:" + up);
+                System.out.println((totalChars * (progress / 100.0)));*/
+                if(up%(int)(totalChars * (progress / 100.0))==0){
+                    actualizarEstadisticasGlobales(offset);
+                    System.out.println("--------------------------------");
+                    System.out.println("Updated progress is:" + up);
+                    System.out.println((totalChars * (progress / 100.0)));
+                    System.out.println("SHA DE MOSTRAR");
                     showProgress();
                 }
             }
@@ -97,8 +118,22 @@ public class MyThreadB implements Runnable{
         sincro = true;
     }
 
-    private void showProgress() {
-        System.out.println("MOSTRAR ESTADISTICAS!");
+    private void actualizarEstadisticasGlobales(long offset) {
+        bl.lock();
+        numeroOffsets=numeroOffsets + offset;   //Offsets gobales hasta el momento
+        bl.unlock();
+
+    }
+
+    public void showProgress() {
+        System.out.println("++++++++++ESTADISTICAS GLOBALES+++++++++");
+        System.out.println("++++++++++++++++++++++++++++++++++++++++");
+        System.out.println("Numero de keys diferentes totales:" + numeroKeys);
+        System.out.println("Numero values (offset) totales:" + numeroOffsets);
+        System.out.println("Numero de bytes totales leidos del fichero:");
+        System.out.println("Progreso total de la construcción del índice:");
+        System.out.println("++++++++++++++++++++++++++++++++++++++++");
+
     }
 
     private int updateProgess() {
