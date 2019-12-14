@@ -24,13 +24,15 @@ public class MyThreadB implements Runnable{
     private int KeySize;
     private int nThreads;
     public boolean sincro = false;
+    private int progress;  //Marca cada cuantos caracteres hay que printar el progreso.
+    private int totalChars;
 
     static ReentrantLock bl = new ReentrantLock();
     static Semaphore llegada = new Semaphore(1);    //permiso a 1
     static Semaphore salida = new Semaphore(0);     //permiso a 0
     static volatile int barrierCounter = 0;
 
-    MyThreadB(int number, int KeySize, File file, long initialChar, long finalChar, HashMultimap<String, Long> hash, int nThreads) {
+    MyThreadB(int number, int KeySize, File file, long initialChar, long finalChar, HashMultimap<String, Long> hash, int nThreads,int Progress,int totalChars) {
         this.thread = new Thread(this);
         this.number = number;
         this.file = file;
@@ -40,6 +42,8 @@ public class MyThreadB implements Runnable{
         this.KeySize = KeySize;
         this.n = "T" + number;
         this.nThreads = nThreads;
+        this.progress = Progress;
+        this.totalChars = totalChars;
         System.out.println("Thread n" + number + " creado");
     }
 
@@ -80,6 +84,10 @@ public class MyThreadB implements Runnable{
                 if (key.length()==KeySize)
                     // Si tenemos una clave completa, la añadimos al Hash, junto a su desplazamiento dentro del fichero.
                     AddKey(key, offset-KeySize+1);
+
+                if(updateProgess()%(int)(totalChars * (progress / 100.0))==0){
+                    showProgress();
+                }
             }
             raf.close();
         } catch (IOException e) {
@@ -87,8 +95,21 @@ public class MyThreadB implements Runnable{
         }
         act_as_a_barrier();
         sincro = true;
-        System.out.println("IM Thread "+number+" sincro is "+sincro);
     }
+
+    private void showProgress() {
+        System.out.println("MOSTRAR ESTADISTICAS!");
+    }
+
+    private int updateProgess() {
+        synchronized (this){
+            return InvertedIndexConc.actualProgress.incrementAndGet();
+        }
+    }
+    public boolean getSincro(){
+        return sincro;
+    }
+
     // Método que añade una k-word y su desplazamiento en el HashMap.
     private synchronized void AddKey(String key, long offset){
         Hash.put(key, offset);
@@ -102,7 +123,6 @@ public class MyThreadB implements Runnable{
         }
         bl.lock();
         barrierCounter++;
-        System.out.println(barrierCounter);
         bl.unlock();
         if (barrierCounter < nThreads) {
             llegada.release();

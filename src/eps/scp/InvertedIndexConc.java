@@ -8,6 +8,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -23,6 +24,7 @@ public class InvertedIndexConc{
     private final int DPaddingMatchText = 20;   // Al mostrar el texto original que se corresponde con la consulta se incrementa en 20 carácteres
     private final int DThreads = 5;
     private int Progress = 5;
+    public static AtomicInteger actualProgress = new AtomicInteger(0);
     //private final int DChunkSize = 100;
 
     // Members
@@ -66,7 +68,7 @@ public class InvertedIndexConc{
     public InvertedIndexConc(String inputFile,int numThreads ,int progress,int keySize) {
         InputFilePath = inputFile;
         nThreads = numThreads;
-        Progress = progress/100;
+        Progress = progress;
         KeySize = keySize;
     }
     public InvertedIndexConc(int numThreads) {
@@ -89,7 +91,7 @@ public class InvertedIndexConc{
 
     public void BuildIndex()
     {
-        long charxThread = 0, initialchar = 0, finalchar, dif = 0;
+        long charxThread = 0, initialchar = 0, finalchar, dif = 0, totalChars,aux;
         ArrayList<MyThreadB> thr = new ArrayList<MyThreadB>();
         File file = new File(InputFilePath);
 
@@ -99,18 +101,21 @@ public class InvertedIndexConc{
             fileLen-=nThreads;
             charxThread++;
         }
+
+        totalChars = charxThread*nThreads;
+
         for (int i = 0; i < nThreads; i++){
             finalchar = initialchar + charxThread - 1;
             if(finalchar > file.length()){
                 dif = finalchar - file.length();
                 finalchar -= dif;
             }
-            MyThreadB t = new MyThreadB(i, KeySize, file, initialchar, finalchar,Hash, nThreads);
+            MyThreadB t = new MyThreadB(i, KeySize, file, initialchar, finalchar,Hash, nThreads,Progress,(int)totalChars);
             initialchar += charxThread;
             thr.add(t); //añadimos el thread al array de threads
             t.thread.start();
         }
-        while(!thr.get(0).sincro){System.out.println("analizo");}
+        while(!thr.get(0).getSincro()){System.out.print("");}
         System.out.println("SALGO");
         /*
         //act_as_a_barrier(llegada, salida);
@@ -150,8 +155,6 @@ public class InvertedIndexConc{
         Set<String> keyTSet;
         ArrayList<MyThreadI> thr = new ArrayList<MyThreadI>();
 
-
-
         // Calculamos el número de ficheros a crear en función del núemro de claves que hay en el hash.
         if (keySet.size() > DIndexMaxNumberOfFiles)
             numberOfFiles = DIndexMaxNumberOfFiles;
@@ -185,10 +188,8 @@ public class InvertedIndexConc{
             thr.add(t);
             t.thread.start();
         }
-        while(!thr.get(0).sincro){System.out.println("analizo");}
+        while(!thr.get(0).sincro){System.out.print("");}
         System.out.println("SALGO");
-
-
         /*for (MyThreadI t : thr) {
             try {
                 t.thread.join();

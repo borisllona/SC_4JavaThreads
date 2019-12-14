@@ -102,7 +102,6 @@ public class MyThreadI implements Runnable{
         } catch (InterruptedException e1) {}
         bl.lock();
         barrierCounter++;
-        System.out.println(barrierCounter);
         bl.unlock();
         if (barrierCounter < nThreads) {
             llegada.release();
