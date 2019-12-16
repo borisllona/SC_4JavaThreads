@@ -22,9 +22,9 @@ public class MyThreadQ implements Runnable {
     Lock l = new ReentrantLock();
 
     static ReentrantLock bl = new ReentrantLock();
-    static Semaphore llegada = new Semaphore(1);    //permiso a 1
-    static Semaphore salida = new Semaphore(0);     //permiso a 0
-    static volatile int barrierCounter = 0;
+    private static Semaphore llegada = new Semaphore(1);    //permiso a 1
+    private static Semaphore salida = new Semaphore(0);     //permiso a 0
+    private static int barrierCounter = 0;
 
     MyThreadQ(int number, File[] listOfFiles, long initialFile, long finalFile, HashMultimap<String, Long> hash,int nThreads) {
         this.thread = new Thread(this);
@@ -32,13 +32,10 @@ public class MyThreadQ implements Runnable {
         this.listOfFiles = listOfFiles;
         this.initialFile = initialFile;
         this.finalFile = finalFile;
-        this.Hash = hash;
+        //this.Hash = hash;
         this.n = "T" + number;
         this.nThreads = nThreads;
         System.out.println("Thread n" + number + " creado");
-    }
-    public HashMultimap<String, Long> getHash(){
-        return this.Hash;
     }
     @Override
     public void run() {
@@ -64,11 +61,9 @@ public class MyThreadQ implements Runnable {
                             for (int i = 0; i < offsets.length; i++) {
                                 long offset = Long.parseLong(offsets[i]);
                                 l.lock();
-                                try{
-                                    Hash.put(key, offset);
-                                }finally {
-                                    l.unlock();
-                                }
+                                InvertedIndexConc.Hash.put(key, offset);
+
+                                l.unlock();
                             }
                         }
                     } catch (IOException e) {
@@ -91,7 +86,6 @@ public class MyThreadQ implements Runnable {
         } catch (InterruptedException e1) {}
         bl.lock();
         barrierCounter++;
-        System.out.println(barrierCounter);
         bl.unlock();
         if (barrierCounter < nThreads) {
             llegada.release();

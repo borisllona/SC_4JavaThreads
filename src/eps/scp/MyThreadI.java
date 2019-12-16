@@ -32,6 +32,7 @@ public class MyThreadI implements Runnable{
     static Semaphore salida = new Semaphore(0);     //permiso a 0
     static volatile int barrierCounter = 0;
 
+
     MyThreadI(int number, ArrayList<String> list, String outputDirectory, int files, HashMultimap<String, Long> hash, int nThreads){
         this.thread = new Thread(this);
         this.number = number;
@@ -97,6 +98,7 @@ public class MyThreadI implements Runnable{
 
     // Método para cargar en memoria (HashMap) el índice invertido desde su copia en disco.
     private void act_as_a_barrier() {
+
         try {
             llegada.acquire();
         } catch (InterruptedException e1) {}

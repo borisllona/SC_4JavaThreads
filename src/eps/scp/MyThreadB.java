@@ -29,23 +29,26 @@ public class MyThreadB implements Runnable{
     private int totalChars;
 
     //Estadisticas
-    private int numeroKeys=0;
-    private long numeroOffsets=0;
+    /*private int numeroDifKeysGlobal=0;
+    private int numeroTotKeysGlobal=0;
+    private long numeroOffsetsGlobal=0;
     private int numeroBytes=0;
-    private int currentProgress=0;
+    private int currentProgress=0;*/
+    private int offsetGlobal = 0;
 
     static ReentrantLock bl = new ReentrantLock();
     static Semaphore llegada = new Semaphore(1);    //permiso a 1
     static Semaphore salida = new Semaphore(0);     //permiso a 0
-    static volatile int barrierCounter = 0;
+    static int barrierCounter = 0;
 
-    MyThreadB(int number, int KeySize, File file, long initialChar, long finalChar, HashMultimap<String, Long> hash, int nThreads,int Progress,int totalChars) {
+    MyThreadB(int number, int KeySize, File file, long initialChar, long finalChar, HashMultimap<String, Long> hash,
+              int nThreads,int Progress,int totalChars) {
         this.thread = new Thread(this);
         this.number = number;
         this.file = file;
         this.initialChar = initialChar;
         this.finalChar = finalChar;
-        this.Hash = hash;
+        //this.Hash = hash;
         this.KeySize = KeySize;
         this.n = "T" + number;
         this.nThreads = nThreads;
@@ -54,16 +57,13 @@ public class MyThreadB implements Runnable{
         System.out.println("Thread n" + number + " creado");
     }
 
-    public HashMultimap<String, Long> getHash() {
-        return this.Hash;
-    }
 
     @Override
     public void run() {
         //FileInputStream is;
         long offset = -1;
         int car;
-        int up = 0;
+
         String key="";
        // System.out.println("inici" + initialChar);
         //System.out.println("final" + finalChar);
@@ -76,41 +76,53 @@ public class MyThreadB implements Runnable{
             while( raf.getFilePointer() < finalChar && (car = raf.read())!=-1)
             {
                 offset++;
+                //bl.lock();
+                //numeroOffsetsGlobal++;
+                //bl.unlock();
                 if (car=='\n' || car=='\r' || car=='\t') {
                     // Sustituimos los carácteres de \n,\r,\t en la clave por un espacio en blanco.
                     if (key.length()==KeySize && key.charAt(KeySize-1)!=' ')
                         key = key.substring(1, KeySize) + ' ';
-                    up = updateProgess();
+                    offsetGlobal = updateOffset();
                     continue;
                 }
                 if (key.length()<KeySize) {
                     // Si la clave es menor de K, entonces le concatenamos el nuevo carácter leído.
                     key = key + (char) car;
                 }else {
-                    // Si la clave es igua a K, entonces eliminaos su primier carácter y le concatenamos el nuevo carácter leído (implementamos una slidding window sobre el fichero a indexar).
+                    // Si la clave es igua a K, entonces eliminaos su primier carácter y le concatenamos el nuevo
+                    // carácter leído (implementamos una slidding window sobre el fichero a indexar).
                     key = key.substring(1, KeySize) + (char) car;
                 }
                 if (key.length()==KeySize) {
-                    /*if(Hash.get(key) == null){
-                        System.out.println("KEY NO EN HASH");
-                        bl.lock();
-                        numeroKeys++;
-                        bl.unlock();
-                    }*/
+
+                    if (InvertedIndexConc.Hash.get(key).isEmpty()) {  //Si la key no se encuentra en la hash
+                        updateDifKeysProcesadas();  //incrementamos la variable de distintas keys procesadas
+                    }
                     // Si tenemos una clave completa, la añadimos al Hash, junto a su desplazamiento dentro del fichero.
                     AddKey(key, offset - KeySize + 1);
-                }up = updateProgess();
-                /*System.out.println("Updated progress is:" + up);
-                System.out.println((totalChars * (progress / 100.0)));*/
-                if(up%(int)(totalChars * (progress / 100.0))==0){
-                    actualizarEstadisticasGlobales(offset);
-                    System.out.println("--------------------------------");
-                    System.out.println("Updated progress is:" + up);
-                    System.out.println((totalChars * (progress / 100.0)));
-                    System.out.println("SHA DE MOSTRAR");
-                    showProgress();
+                    InvertedIndexConc.numBytesTotalesEscritos.addAndGet(KeySize);   //Añadimos el size de la key para calcular el valor total de bytes escritos
+                }
+
+                offsetGlobal = updateOffset();
+                if(offsetGlobal%(int)(totalChars * (progress / 100.0))==0){
+                    bl.lock();
+                    updateProgress();
+                    bl.unlock();
+                    synchronized (this) {
+                        while (!InvertedIndexConc.showProgress()) {
+                            try {
+                                this.wait();
+                            } catch (java.lang.InterruptedException e) {
+                            }
+                        }
+                        this.notify();
+                    }
                 }
             }
+
+            InvertedIndexConc.numBytesTotalesLeidos.addAndGet((int)raf.length());
+            //System.out.println("LENGTH:" + raf.length());
             raf.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -118,64 +130,59 @@ public class MyThreadB implements Runnable{
         act_as_a_barrier();
         sincro = true;
     }
+    private void updateProgress(){              //Actualiza el progreso total
 
-    private void actualizarEstadisticasGlobales(long offset) {
-        bl.lock();
-        numeroOffsets=numeroOffsets + offset;   //Offsets gobales hasta el momento
-        bl.unlock();
+        InvertedIndexConc.currentProgress.addAndGet(progress);
 
-    }
-
-    public void showProgress() {
-        System.out.println("++++++++++ESTADISTICAS GLOBALES+++++++++");
-        System.out.println("++++++++++++++++++++++++++++++++++++++++");
-        System.out.println("Numero de keys diferentes totales:" + numeroKeys);
-        System.out.println("Numero values (offset) totales:" + numeroOffsets);
-        System.out.println("Numero de bytes totales leidos del fichero:");
-        System.out.println("Progreso total de la construcción del índice:");
-        System.out.println("++++++++++++++++++++++++++++++++++++++++");
 
     }
-
-    private int updateProgess() {
+    private void updateDifKeysProcesadas() {      //Actualiza las distintas keys procesadas
         synchronized (this){
-            return InvertedIndexConc.actualProgress.incrementAndGet();
+            InvertedIndexConc.diffKeysTotalesProcesadas.incrementAndGet();
         }
     }
-    public boolean getSincro(){
+
+    private int updateOffset() {        //Actualiza y devuelve el Offset actual
+        synchronized (this){
+            return InvertedIndexConc.actualOffset.incrementAndGet();
+        }
+    }
+
+    public boolean getSincro(){     //para saber si se han sincronizado todos los hilos des del InvertedIndexConc
         return sincro;
     }
 
     // Método que añade una k-word y su desplazamiento en el HashMap.
     private synchronized void AddKey(String key, long offset){
-        Hash.put(key, offset);
+        InvertedIndexConc.Hash.put(key, offset);
         //System.out.print(offset+"\t-> "+key+"\r");
     }
 
     void act_as_a_barrier() {
         try {
-            llegada.acquire();
+            llegada.acquire();              //Adquiere el permiso de llegada (1)
         } catch (InterruptedException e1) {
         }
-        bl.lock();
-        barrierCounter++;
+        bl.lock();                          //sincronizamos hilos
+        barrierCounter++;                   //Incrementamos la variable global para controlar el numero de hilos que
+                                            //han terminado
         bl.unlock();
-        if (barrierCounter < nThreads) {
-            llegada.release();
+        if (barrierCounter < nThreads) {    //Si el contador global es mas pequeño que el numero de threads totales
+            llegada.release();              //liberamos el permiso de entrada, falta por llegar más threads
         } else {
-            salida.release();
+            salida.release();               //liberamos el permiso de salida porque ya han llegado todos
         }
         try {
-            salida.acquire();
+            salida.acquire();               //adquirmos el permiso de salida
         } catch (InterruptedException e) {
         }
         bl.lock();
-        barrierCounter--;
+        barrierCounter--;                   //cada hilo decrementa la variable global asociada al numero de hilos
         bl.unlock();
-        if (barrierCounter > 0) {
-            salida.release();
+        if (barrierCounter > 0) {           //En caso que el contador aun sea mayor de 0
+            salida.release();               //liberaremos el permiso de salida porque ya han llegado todos
         } else {
-            llegada.release();
+            llegada.release();              //liberaremos el permiso de entrada porque
         }
     }
 }

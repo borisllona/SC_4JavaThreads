@@ -57,15 +57,13 @@ public class Query
         if (args.length == 4)
             hash = new InvertedIndexConc(Integer.parseInt(args[3]));
         else if (args.length == 5)
-            hash = new InvertedIndexConc(Integer.parseInt(args[3]), Integer.parseInt(args[4]));
-        else if (args.length == 6)
-            hash = new InvertedIndexConc(Integer.parseInt(args[3]), Integer.parseInt(args[4],Integer.parseInt(args[5])));
+            hash = new InvertedIndexConc(Integer.parseInt(args[3]), Integer.parseInt(args[4]), 0);
         else
             hash = new InvertedIndexConc();
         /*System.out.println("queryString: " + queryString);
         System.out.println("indexdire: " + indexDirectory);
         System.out.println("filename: " + fileName);
-        System.out.println("numtrheads: " + hash.getThreads());
+        //System.out.println("numtrheads: " + hash.getThreads());
         System.out.println("key: " + hash.getKey());*/
         hash.LoadIndex(indexDirectory);
         hash.SetFileName(fileName);

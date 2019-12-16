@@ -4,10 +4,12 @@ import com.google.common.collect.HashMultimap;
 //import sun.security.mscapi.KeyStore;
 
 import java.io.*;
+import java.lang.invoke.SwitchPoint;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -24,7 +26,14 @@ public class InvertedIndexConc{
     private final int DPaddingMatchText = 20;   // Al mostrar el texto original que se corresponde con la consulta se incrementa en 20 carácteres
     private final int DThreads = 5;
     private int Progress = 5;
-    public static AtomicInteger actualProgress = new AtomicInteger(2);
+
+    //estadisticas globales
+    public static AtomicInteger actualOffset = new AtomicInteger(2);
+    public static AtomicInteger diffKeysTotalesProcesadas = new AtomicInteger(0);
+    public static AtomicInteger diffKeysTotalesGeneradas = new AtomicInteger(0);
+    public static AtomicInteger currentProgress = new AtomicInteger(0);
+    public static AtomicInteger numBytesTotalesLeidos = new AtomicInteger(0);
+    public static AtomicInteger numBytesTotalesEscritos = new AtomicInteger(0);
     //private final int DChunkSize = 100;
 
     // Members
@@ -32,8 +41,10 @@ public class InvertedIndexConc{
     private RandomAccessFile randomInputFile;  // Fichero random para acceder al texto original con mayor porcentaje de matching.
     private int KeySize;            // Número de carácteres de la clave (k-word)
     private int nThreads;
-    public HashMultimap<String, Long> Hash = HashMultimap.create();  // Hash Map con el Índice Invertido.
+    public static HashMultimap<String, Long> Hash = HashMultimap.create();  // Hash Map con el Índice Invertido.
 
+    //Sincronizacion
+    public static int sincronizacionThreadsContador = 0;
     //Barrier variables
     /*
     static Lock bl = new ReentrantLock();
@@ -78,11 +89,12 @@ public class InvertedIndexConc{
         nThreads = numThreads;
         Progress = progress/100;
     }
-    public InvertedIndexConc(int numThreads,int progress,int keySize) {
+    public InvertedIndexConc(int numThreads,int keySize, int p) {
         nThreads = numThreads;
-        Progress = progress/100;
         KeySize = keySize;
     }
+
+
     public void SetFileName(String inputFile) {
         InputFilePath = inputFile;
     }
@@ -112,21 +124,25 @@ public class InvertedIndexConc{
             }
             MyThreadB t = new MyThreadB(i, KeySize, file, initialchar, finalchar,Hash, nThreads,Progress,(int)totalChars);
             initialchar += charxThread;
-            thr.add(t); //añadimos el thread al array de threads
+            thr.add(t);
             t.thread.start();
         }
-        while(!thr.get(0).getSincro()){System.out.print("");}
+
+
+        while(!thr.get(0).getSincro()){ System.out.print(""); }
         System.out.println("SALGO");
-        /*
-        //act_as_a_barrier(llegada, salida);
-        for (MyThreadB t : thr) {
-            try {
-                t.thread.join();
-                //Hash.putAll(t.getHash());
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }*/
+    }
+
+    public static boolean showProgress() {
+        System.out.println("++++++++++ESTADISTICAS GLOBALES+++++++++");
+        System.out.println("++++++++++++++++++++++++++++++++++++++++");
+        System.out.println("Numero de keys diferentes generadas/procesadas: " + diffKeysTotalesGeneradas + " / " + diffKeysTotalesProcesadas);
+        System.out.println("Numero values (offset) generados/procesados: " + actualOffset + " / " + actualOffset);
+        System.out.println("Numero de bytes totales leidos/escritos/procesados del fichero: " + numBytesTotalesLeidos + " / "
+                + numBytesTotalesEscritos + " / " );
+        System.out.println("Progreso total de la construcción del índice:" + currentProgress + "%");
+        System.out.println("++++++++++++++++++++++++++++++++++++++++");
+        return true;
     }
 
     // Método para imprimir por pantalla el índice invertido.
@@ -190,13 +206,7 @@ public class InvertedIndexConc{
         }
         while(!thr.get(0).sincro){System.out.print("");}
         System.out.println("SALGO");
-        /*for (MyThreadI t : thr) {
-            try {
-                t.thread.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }*/
+
     }
 
     // Método para cargar en memoria (HashMap) el índice invertido desde su copia en disco.
@@ -226,33 +236,21 @@ public class InvertedIndexConc{
             thr.add(t); //añadimos el thread al array de threads
             t.thread.start();
         }
-        while(!thr.get(0).sincro){System.out.println("analizo");}
+        while(!thr.get(0).sincro){System.out.print("");}
         System.out.println("SALGO");
-        /*
-        //para cada thread añadido al array controlamos su fin con la funcionn join()
-        for (MyThreadQ t : thr) {
-            try {
-                t.thread.join();
-                Hash.putAll(t.getHash());
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }*/
+
     }
 
     public void Query(String queryString) {
         String queryResult=null;
         Map<Long, Integer> offsetsFreq, sorted_offsetsFreq;
 
-
         System.out.println ("Searching for query: "+queryString);
         // Split Query in keys & Obtain keys offsets
         offsetsFreq = GetQueryOffsets(queryString);
-
         // Sort offsets by Frequency in descending order
         sorted_offsetsFreq = SortOffsetsFreq(offsetsFreq);
         //PrintOffsetsFreq(sorted_offsetsFreq);
-
         // Show results (offsets>Threshold)
         try {
             // Open original input file for random access.
@@ -267,10 +265,11 @@ public class InvertedIndexConc{
         {
             Map.Entry<Long, Integer> entry = itr.next();
             // Calculamos el porcentaje de matching y si es superior al mínimo requerido imprimimos el resultado (texto en esta posición del fichero original)
-            if (((float)entry.getValue()/(float)maxFreq)>=DMinimunMatchingPercentage)
-                PrintMatching(entry.getKey(), queryString.length(), (float)entry.getValue()/(float)maxFreq);
-            else
+            if (((float)entry.getValue()/(float)maxFreq)>=DMinimunMatchingPercentage) {
+                PrintMatching(entry.getKey(), queryString.length(), (float) entry.getValue() / (float) maxFreq);
+            } else {
                 break;
+            }
         }
         try {
             randomInputFile.close();
@@ -284,6 +283,7 @@ public class InvertedIndexConc{
     // generadas a partir de la consulta
     private Map<Long, Integer> GetQueryOffsets(String query)
     {
+
         Map<Long, Integer> offsetsFreq = new HashMap<Long, Integer>();
         int queryLenght = query.length();
         // Recorremos todas las keys (k-words) de la consulta
@@ -360,6 +360,5 @@ public class InvertedIndexConc{
         }
         System.out.println("Matching at offset "+offset+" ("+ perMatching*100 + "%): "+new String(matchText));
     }
-
 
 }
