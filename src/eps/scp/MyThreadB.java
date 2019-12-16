@@ -63,6 +63,7 @@ public class MyThreadB implements Runnable{
         //FileInputStream is;
         long offset = -1;
         int car;
+        int up = 0;
         String key="";
        // System.out.println("inici" + initialChar);
         //System.out.println("final" + finalChar);
@@ -79,16 +80,17 @@ public class MyThreadB implements Runnable{
                     // Sustituimos los carácteres de \n,\r,\t en la clave por un espacio en blanco.
                     if (key.length()==KeySize && key.charAt(KeySize-1)!=' ')
                         key = key.substring(1, KeySize) + ' ';
+                    up = updateProgess();
                     continue;
                 }
-                if (key.length()<KeySize)
+                if (key.length()<KeySize) {
                     // Si la clave es menor de K, entonces le concatenamos el nuevo carácter leído.
                     key = key + (char) car;
-                else
+                }else {
                     // Si la clave es igua a K, entonces eliminaos su primier carácter y le concatenamos el nuevo carácter leído (implementamos una slidding window sobre el fichero a indexar).
                     key = key.substring(1, KeySize) + (char) car;
-
-                if (key.length()==KeySize)
+                }
+                if (key.length()==KeySize) {
                     /*if(Hash.get(key) == null){
                         System.out.println("KEY NO EN HASH");
                         bl.lock();
@@ -96,9 +98,8 @@ public class MyThreadB implements Runnable{
                         bl.unlock();
                     }*/
                     // Si tenemos una clave completa, la añadimos al Hash, junto a su desplazamiento dentro del fichero.
-                    AddKey(key, offset-KeySize+1);
-
-                int up = updateProgess();
+                    AddKey(key, offset - KeySize + 1);
+                }up = updateProgess();
                 /*System.out.println("Updated progress is:" + up);
                 System.out.println((totalChars * (progress / 100.0)));*/
                 if(up%(int)(totalChars * (progress / 100.0))==0){

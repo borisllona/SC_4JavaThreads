@@ -24,7 +24,7 @@ public class InvertedIndexConc{
     private final int DPaddingMatchText = 20;   // Al mostrar el texto original que se corresponde con la consulta se incrementa en 20 carácteres
     private final int DThreads = 5;
     private int Progress = 5;
-    public static AtomicInteger actualProgress = new AtomicInteger(0);
+    public static AtomicInteger actualProgress = new AtomicInteger(2);
     //private final int DChunkSize = 100;
 
     // Members
