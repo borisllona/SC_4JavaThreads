@@ -83,16 +83,25 @@ public class MyThreadB implements Runnable{
                     // Sustituimos los carácteres de \n,\r,\t en la clave por un espacio en blanco.
                     if (key.length()==KeySize && key.charAt(KeySize-1)!=' ')
                         key = key.substring(1, KeySize) + ' ';
+                        synchronized (this){
+                            InvertedIndexConc.diffKeysTotalesGeneradas.incrementAndGet();
+                        }
                     offsetGlobal = updateOffset();
                     continue;
                 }
                 if (key.length()<KeySize) {
                     // Si la clave es menor de K, entonces le concatenamos el nuevo carácter leído.
                     key = key + (char) car;
+                    synchronized (this){
+                        InvertedIndexConc.diffKeysTotalesGeneradas.incrementAndGet();
+                    }
                 }else {
                     // Si la clave es igua a K, entonces eliminaos su primier carácter y le concatenamos el nuevo
                     // carácter leído (implementamos una slidding window sobre el fichero a indexar).
                     key = key.substring(1, KeySize) + (char) car;
+                    synchronized (this){
+                        InvertedIndexConc.diffKeysTotalesGeneradas.incrementAndGet();
+                    }
                 }
                 if (key.length()==KeySize) {
 
@@ -101,9 +110,14 @@ public class MyThreadB implements Runnable{
                     }
                     // Si tenemos una clave completa, la añadimos al Hash, junto a su desplazamiento dentro del fichero.
                     AddKey(key, offset - KeySize + 1);
+                    bl.lock();
                     InvertedIndexConc.numBytesTotalesEscritos.addAndGet(KeySize);   //Añadimos el size de la key para calcular el valor total de bytes escritos
+                    bl.unlock();
                 }
-
+                //ESTA MALAMENT
+                synchronized (this){
+                    InvertedIndexConc.numBytesTotalesLeidos.getAndSet((int) offset);
+                }
                 offsetGlobal = updateOffset();
                 if(offsetGlobal%(int)(totalChars * (progress / 100.0))==0){
                     bl.lock();
@@ -121,7 +135,7 @@ public class MyThreadB implements Runnable{
                 }
             }
 
-            InvertedIndexConc.numBytesTotalesLeidos.addAndGet((int)raf.length());
+
             //System.out.println("LENGTH:" + raf.length());
             raf.close();
         } catch (IOException e) {

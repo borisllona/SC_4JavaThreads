@@ -62,6 +62,7 @@ public class MyThreadQ implements Runnable {
                                 long offset = Long.parseLong(offsets[i]);
                                 l.lock();
                                 InvertedIndexConc.Hash.put(key, offset);
+
                                 l.unlock();
                             }
                         }

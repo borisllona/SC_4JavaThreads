@@ -43,16 +43,7 @@ public class InvertedIndexConc{
     private int nThreads;
     public static HashMultimap<String, Long> Hash = HashMultimap.create();  // Hash Map con el Índice Invertido.
 
-    //Sincronizacion
-    public static int sincronizacionThreadsContador = 0;
-    //Barrier variables
-    /*
-    static Lock bl = new ReentrantLock();
-    static Semaphore llegada = new Semaphore(1);    //permiso a 1
-    static Semaphore salida = new Semaphore(0);     //permiso a 0
-    static volatile int barrierCounter = 0;*/
 
-//    public int test = 69;
     // Constructores
     public InvertedIndexConc() {
         InputFilePath = null;
