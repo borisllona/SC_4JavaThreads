@@ -103,18 +103,25 @@ public class MyThreadB implements Runnable{
                         InvertedIndexConc.diffKeysTotalesGeneradas.incrementAndGet();
                     }
                 }
-                if (key.length()==KeySize) {
+                synchronized (this){
+                    if (key.length()==KeySize) {
 
-                    if (InvertedIndexConc.Hash.get(key).isEmpty()) {  //Si la key no se encuentra en la hash
-                        updateDifKeysProcesadas();  //incrementamos la variable de distintas keys procesadas
+
+                        /*if (InvertedIndexConc.Hash.get(key).isEmpty()) {  //Si la key no se encuentra en la hash
+
+                           // updateDifKeysProcesadas();  //incrementamos la variable de distintas keys procesadas
+
+                        }*/
+
+                        // Si tenemos una clave completa, la añadimos al Hash, junto a su desplazamiento dentro del fichero.
+
+                        AddKey(key, offset - KeySize + 1);
+                        bl.lock();
+                        InvertedIndexConc.numBytesTotalesEscritos.addAndGet(KeySize);   //Añadimos el size de la key para calcular el valor total de bytes escritos
+                        bl.unlock();
                     }
-                    // Si tenemos una clave completa, la añadimos al Hash, junto a su desplazamiento dentro del fichero.
-                    AddKey(key, offset - KeySize + 1);
-                    bl.lock();
-                    InvertedIndexConc.numBytesTotalesEscritos.addAndGet(KeySize);   //Añadimos el size de la key para calcular el valor total de bytes escritos
-                    bl.unlock();
                 }
-                //ESTA MALAMENT
+
                 synchronized (this){
                     InvertedIndexConc.numBytesTotalesLeidos.getAndSet((int) offset);
                 }
@@ -168,7 +175,9 @@ public class MyThreadB implements Runnable{
 
     // Método que añade una k-word y su desplazamiento en el HashMap.
     private synchronized void AddKey(String key, long offset){
+
         InvertedIndexConc.Hash.put(key, offset);
+        updateDifKeysProcesadas();
         //System.out.print(offset+"\t-> "+key+"\r");
     }
 
